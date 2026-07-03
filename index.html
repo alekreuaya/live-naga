@@ -125,8 +125,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
 <header class="hdr">
   <div class="hdr-in">
-    <a href="https://okenaga.com/nagalogin" class="logo">
-      <img src="https://res.cloudinary.com/dagep4x49/image/upload/v1783073563/favicon_l11ggx.png" height="32" style="border-radius:7px;">
+    <a href="https://www.primenaga.com" class="logo">
+      <img src="https://res.cloudinary.com/dagep4x49/image/upload/v1783073563/favicon_l11ggx.png" height="32" width="32" style="border-radius:7px;object-fit:cover;" alt="Naga1001">
       <div class="logo-txt">NAGA<span>1001</span> LIVE</div>
     </a>
     <div class="hdr-r">
@@ -184,7 +184,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
   <aside class="side">
     <div class="cta">
-      <h3> Bet Live di Naga1001</h3>
+      <h3>🐉 Bet Live di Naga1001</h3>
       <p>Pasang taruhan semua pertandingan — odds terbaik, proses cepat, CS 24 jam.</p>
       <a href="https://okenaga.com/nagalogin" target="_blank" rel="noopener">🟠 Login & Bet Sekarang</a>
     </div>
@@ -216,7 +216,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   <a class="mnav-item" onclick="setSport('basketball',null)"><span class="mnav-ico">🏀</span>Basket</a>
   <a class="mnav-item" onclick="setSport('badminton',null)"><span class="mnav-ico">🏸</span>Badminton</a>
   <a class="mnav-item" href="https://okenaga.com/nagalogin" target="_blank"><span class="mnav-ico">🎰</span>Bet</a>
-  <a class="mnav-item" href="https://okenaga.com/nagalogin" target="_blank"><span class="mnav-ico">🐉</span>Naga1001</a>
+  <a class="mnav-item" href="https://www.primenaga.com" target="_blank"><span class="mnav-ico">🐉</span>Naga1001</a>
 </nav>
 
 <script>
@@ -336,6 +336,7 @@ function renderCard(m) {
   const hasStream = m.iframes&&m.iframes.length>0;
   const o = st!=='ended' ? genOdds() : null;
   const isOpen = openMatch===m.slug;
+  const firstUrl = m.iframes&&m.iframes[0] ? m.iframes[0].url : null;
 
   const center = st==='live'
     ? `<div class="min-badge">LIVE</div><div class="score live">— : —</div>`
@@ -354,9 +355,13 @@ function renderCard(m) {
             ${f.server}
           </button>`).join('')}
       </div>
+      ${firstUrl ? `<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:.7rem;color:var(--muted);">Video tidak muncul?</span>
+        <a href="${firstUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#22c55e;color:#000;font-size:.7rem;font-weight:800;padding:5px 12px;border-radius:6px;text-decoration:none;">🔗 Tonton di Tab Baru</a>
+      </div>` : ''}
       <div class="player-wrap" id="pw-${m.slug}">
         ${m.iframes[0]
-          ? `<iframe src="${m.iframes[0].url}" allowfullscreen allow="autoplay;fullscreen" scrolling="no" loading="lazy"></iframe>`
+          ? `<iframe src="${m.iframes[0].url}" allowfullscreen allow="autoplay;fullscreen;encrypted-media;picture-in-picture" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation allow-downloads" scrolling="no" loading="lazy"></iframe>`
           : `<div class="no-stream"><span style="font-size:2rem">📺</span><span style="font-size:.8rem">Stream tidak tersedia</span></div>`}
       </div>
     </div>` : '';
