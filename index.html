@@ -119,6 +119,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .toast.show{display:flex;animation:fadeUp .25s ease;}
 @keyframes fadeUp{from{transform:translateY(10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 .disclaimer{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.72rem;color:var(--muted2);line-height:1.6;}
+
+.server-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px;}
+.srv-open-btn{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;color:var(--text);font-family:inherit;}
+.srv-open-btn:hover{background:var(--accent);border-color:var(--accent);color:#000;}
+.srv-ico{font-size:1rem;flex-shrink:0;}
+.srv-lbl{font-size:.78rem;font-weight:700;flex:1;text-align:left;}
+.srv-arrow{font-size:.7rem;opacity:.6;}
+.srv-open-btn:hover .srv-arrow{opacity:1;}
+.stream-hint{font-size:.72rem;color:var(--muted);text-align:center;padding:6px 0 2px;}
+
 </style>
 </head>
 <body>
@@ -348,21 +358,17 @@ function renderCard(m) {
 
   const streamPanel = hasStream ? `
     <div class="stream-panel" id="sp-${m.slug}">
-      <div class="stream-title">📺 Pilih Server</div>
-      <div class="server-tabs">
+      <div class="stream-title">📺 Pilih Server & Tonton</div>
+      <div class="server-grid">
         ${m.iframes.map((f,i)=>`
-          <button class="srv-tab ${i===0?'on':''}" onclick="loadSrv('${m.slug}','${f.url}',this)">
-            ${f.server}
+          <button class="srv-open-btn" onclick="openModal('${f.url}','${m.tag}')">
+            <span class="srv-ico">▶</span>
+            <span class="srv-lbl">${f.server}</span>
+            <span class="srv-arrow">→</span>
           </button>`).join('')}
       </div>
-      ${firstUrl ? `<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="font-size:.7rem;color:var(--muted);">Video tidak muncul?</span>
-        <a href="${firstUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#22c55e;color:#000;font-size:.7rem;font-weight:800;padding:5px 12px;border-radius:6px;text-decoration:none;">🔗 Tonton di Tab Baru</a>
-      </div>` : ''}
-      <div class="player-wrap" id="pw-${m.slug}">
-        ${m.iframes[0]
-          ? `<iframe src="${m.iframes[0].url}" allowfullscreen allow="autoplay;fullscreen;encrypted-media;picture-in-picture" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation allow-downloads" scrolling="no" loading="lazy"></iframe>`
-          : `<div class="no-stream"><span style="font-size:2rem">📺</span><span style="font-size:.8rem">Stream tidak tersedia</span></div>`}
+      <div class="stream-hint">
+        💡 Klik server di atas untuk menonton langsung dalam popup
       </div>
     </div>` : '';
 
@@ -409,12 +415,7 @@ function toggleMatch(slug, e) {
   }
 }
 
-function loadSrv(slug, url, btn) {
-  document.querySelectorAll('#mc-'+slug+' .srv-tab').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  document.getElementById('pw-'+slug).innerHTML=
-    `<iframe src="${url}" allowfullscreen allow="autoplay;fullscreen" scrolling="no"></iframe>`;
-}
+
 
 function renderTicker() {
   const live=(allData[currentSport]||[]).filter(m=>getStatus(m.kickoff,m.endTime)==='live');
@@ -456,8 +457,57 @@ function showToast(msg) {
   setTimeout(()=>t.classList.remove('show'),2500);
 }
 
+
+// ═══ MODAL STREAM ═══
+
+function setExtLink() {
+  const src = document.getElementById('modal-frame').src;
+  document.getElementById('modal-ext').href = src;
+}
+
+function openModal(url, title) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-frame').src = url;
+  document.getElementById('stream-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('stream-modal').style.display = 'none';
+  document.getElementById('modal-frame').src = '';
+  document.body.style.overflow = '';
+}
+
+// close on ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
 loadMatches();
 setInterval(loadMatches, 30000);
 </script>
+
+<!-- STREAM MODAL -->
+<div id="stream-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.92);flex-direction:column;align-items:center;justify-content:center;padding:16px;">
+  <div style="width:100%;max-width:960px;background:var(--s1);border-radius:12px;overflow:hidden;border:1px solid var(--border);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1rem;">📺</span>
+        <span id="modal-title" style="font-size:.88rem;font-weight:700;color:var(--text);"></span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a id="modal-ext" href="#" target="_blank" rel="noopener" onclick="setExtLink()" style="background:var(--green);color:#000;font-size:.72rem;font-weight:800;padding:6px 12px;border-radius:6px;text-decoration:none;">🔗 Buka di Tab Baru</a>
+        <button onclick="closeModal()" style="background:var(--red);color:#fff;border:none;font-size:.8rem;font-weight:800;padding:6px 12px;border-radius:6px;cursor:pointer;">✕ Tutup</button>
+      </div>
+    </div>
+    <div style="position:relative;padding-top:56.25%;background:#000;">
+      <iframe id="modal-frame" src="" allowfullscreen allow="autoplay;fullscreen;encrypted-media;picture-in-picture" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" scrolling="no"></iframe>
+    </div>
+    <div style="padding:10px 16px;font-size:.72rem;color:var(--muted);text-align:center;">
+      Kalau video tidak muncul → klik <strong style="color:var(--green)">🔗 Buka di Tab Baru</strong> &nbsp;|&nbsp; Tekan <strong>ESC</strong> untuk tutup
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
