@@ -225,8 +225,15 @@ body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); 
   <div class="sport-tabs" id="sportTabs">
     <button class="stab on" onclick="setSport('football',this)">⚽ Bola <span class="cnt" id="cnt-football">-</span></button>
     <button class="stab" onclick="setSport('basketball',this)">🏀 Basket <span class="cnt" id="cnt-basketball">-</span></button>
-    <button class="stab" onclick="setSport('fight',this)">🥊 MMA <span class="cnt" id="cnt-fight">-</span></button>
-    <button class="stab" onclick="setSport('football2',this)">🌏 Bola Lainnya <span class="cnt" id="cnt-football2">-</span></button>
+    <button class="stab" onclick="setSport('badminton',this)">🏸 Badminton <span class="cnt" id="cnt-badminton">-</span></button>
+    <button class="stab" onclick="setSport('fight',this)">🥊 Tinju/MMA <span class="cnt" id="cnt-fight">-</span></button>
+    <button class="stab" onclick="setSport('tennis',this)">🎾 Tenis <span class="cnt" id="cnt-tennis">-</span></button>
+    <button class="stab" onclick="setSport('volleyball',this)">🏐 Voli <span class="cnt" id="cnt-volleyball">-</span></button>
+    <button class="stab" onclick="setSport('race',this)">🏁 Balap <span class="cnt" id="cnt-race">-</span></button>
+    <button class="stab" onclick="setSport('amfootball',this)">🏈 NFL <span class="cnt" id="cnt-amfootball">-</span></button>
+    <button class="stab" onclick="setSport('baseball',this)">⚾ Baseball <span class="cnt" id="cnt-baseball">-</span></button>
+    <button class="stab" onclick="setSport('rugby',this)">🏉 Rugby <span class="cnt" id="cnt-rugby">-</span></button>
+    <button class="stab" onclick="setSport('other',this)">📺 Lainnya <span class="cnt" id="cnt-other">-</span></button>
   </div>
 
   <!-- STATUS FILTER -->
@@ -292,11 +299,11 @@ body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); 
   <button class="bnav-item on" onclick="setSport('football',null);setActiveNav(this)">
     <span class="bnav-ico">⚽</span>Bola
   </button>
-  <button class="bnav-item" onclick="setSport('basketball',null);setActiveNav(this)">
-    <span class="bnav-ico">🏀</span>Basket
+  <button class="bnav-item" onclick="setSport('badminton',null);setActiveNav(this)">
+    <span class="bnav-ico">🏸</span>Badminton
   </button>
-  <button class="bnav-item" onclick="setSport('fight',null);setActiveNav(this)">
-    <span class="bnav-ico">🥊</span>MMA
+  <button class="bnav-item" onclick="setSport('race',null);setActiveNav(this)">
+    <span class="bnav-ico">🏁</span>Balap
   </button>
   <a class="bnav-item" href="https://okenaga.com/nagalogin" target="_blank">
     <span class="bnav-ico">🎰</span>Bet
@@ -359,33 +366,16 @@ function shortName(name) {
 // ══ LOAD DATA ══
 async function loadData() {
   try {
-    // Coba SportSRC dulu
-    const r = await Promise.allSettled([
-      fetch(`${SPORTSRC}/?data=matches&category=football`, {signal: AbortSignal.timeout(5000)}).then(r=>r.json()),
-      fetch(`${SPORTSRC}/?data=matches&category=basketball`, {signal: AbortSignal.timeout(5000)}).then(r=>r.json()),
-      fetch(`${SPORTSRC}/?data=matches&category=mma`, {signal: AbortSignal.timeout(5000)}).then(r=>r.json()),
-    ]);
+    // Primary: EmbedSportex via Cloudflare Worker (10 cabang olahraga)
+    const res = await fetch(PROXY+'?cache='+Date.now(), {signal: AbortSignal.timeout(10000)});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
 
-    let hasData = false;
-    const keys = ['football','basketball','fight'];
-    r.forEach((res,i) => {
-      if(res.status==='fulfilled' && Array.isArray(res.value) && res.value.length) {
-        allData[keys[i]] = res.value;
-        hasData = true;
-      } else if(res.status==='fulfilled' && res.value?.matches) {
-        allData[keys[i]] = res.value.matches;
-        hasData = true;
-      }
-    });
-
-    // Fallback ke EmbedSportex via Worker
-    if(!hasData) {
-      const fb = await fetch(PROXY+'?cache='+Date.now(), {signal: AbortSignal.timeout(8000)});
-      const fd = await fb.json();
-      if(fd.football) { allData = fd; hasData = true; }
+    if(data.football || data.basketball || data.badminton) {
+      allData = data;
+    } else {
+      throw new Error('Format tidak dikenali');
     }
-
-    if(!hasData) throw new Error('No data');
 
     updateCounts();
     renderMatches();
@@ -406,9 +396,9 @@ async function loadData() {
 
 // ══ RENDER ══
 function updateCounts() {
-  ['football','basketball','fight','football2'].forEach(s => {
+  ['football','basketball','badminton','fight','tennis','volleyball','race','amfootball','baseball','rugby','other'].forEach(s => {
     const el = document.getElementById('cnt-'+s);
-    if(el) el.textContent = (allData[s]||[]).length;
+    if(el) el.textContent = (allData[s]||[]).length || '-';
   });
 }
 
@@ -440,9 +430,11 @@ function renderMatches() {
       const et = m.endTime||m.end_time||'';
       return (m.status||getStatus(ko,et))==='live';
     }).length;
-    return `<div style="margin-bottom:16px;">
+    const sico = {football:'⚽',basketball:'🏀',badminton:'🏸',fight:'🥊',tennis:'🎾',volleyball:'🏐',race:'🏁',amfootball:'🏈',baseball:'⚾',rugby:'🏉',other:'📺'};
+  const ico = sico[currentSport]||'🏅';
+  return `<div style="margin-bottom:16px;">
       <div class="lg-hdr">
-        <div class="lg-l"><span style="font-size:1rem;">⚽</span><div class="lg-name">${lg}</div></div>
+        <div class="lg-l"><span style="font-size:1rem;">${ico}</span><div class="lg-name">${lg}</div></div>
         ${lc>0 ? `<span class="live-cnt">🔴 ${lc} Live</span>` : ''}
       </div>
       ${ms.map(m => renderCard(m)).join('')}
@@ -595,10 +587,12 @@ function renderTicker() {
     track.innerHTML = '<div class="ticker-item">Tidak ada pertandingan live saat ini</div>';
     return;
   }
+  const sico2 = {football:'⚽',basketball:'🏀',badminton:'🏸',fight:'🥊',tennis:'🎾',volleyball:'🏐',race:'🏁',amfootball:'🏈',baseball:'⚾',rugby:'🏉',other:'📺'};
+  const ico2 = sico2[currentSport]||'🏅';
   const items = live.map(m => {
     const tag = m.tag||m.title||m.name||'Match';
     const sc = m.score || 'LIVE';
-    return `<div class="ticker-item">🔴 ${tag} <span class="t-sc">${sc}</span></div>`;
+    return `<div class="ticker-item">${ico2} ${tag} <span class="t-sc">${sc}</span></div>`;
   }).join('');
   track.innerHTML = items+items;
 }
