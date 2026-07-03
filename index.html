@@ -185,7 +185,7 @@ body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); 
 <!-- HEADER -->
 <header class="hdr">
   <div class="hdr-in">
-    <a href="https://www.primenaga.com" class="logo">
+    <a href="https://okenaga.com/nagalogin" class="logo">
       <img src="https://res.cloudinary.com/dagep4x49/image/upload/v1783073563/favicon_l11ggx.png" alt="Naga1001">
       <div class="logo-txt">NAGA<span>1001</span> LIVE</div>
     </a>
@@ -254,7 +254,7 @@ body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); 
 <!-- SIDEBAR (desktop only) -->
 <aside class="side">
   <div class="cta-box">
-    <h3>🐉 Bet Live di Naga1001</h3>
+    <h3> Bet Live di Naga1001</h3>
     <p>Pasang taruhan semua pertandingan — odds terbaik, proses cepat, CS 24 jam.</p>
     <a href="https://okenaga.com/nagalogin" target="_blank" rel="noopener">🟠 Login & Bet Sekarang</a>
   </div>
@@ -308,7 +308,7 @@ body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); 
   <a class="bnav-item" href="https://okenaga.com/nagalogin" target="_blank">
     <span class="bnav-ico">🎰</span>Bet
   </a>
-  <a class="bnav-item" href="https://www.primenaga.com" target="_blank">
+  <a class="bnav-item" href="https://okenaga.com/nagalogin">
     <span class="bnav-ico">🐉</span>Naga1001
   </a>
 </nav>
@@ -318,8 +318,9 @@ body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); 
 
 <script>
 const BET = 'https://okenaga.com/nagalogin';
-const SPORTSRC = 'https://api.sportsrc.org';
-const PROXY = 'https://live-naga-proxy.alekreuaya.workers.dev';
+// Stream proxy Worker (akun Cloudflare TERPISAH)
+// Ganti AKUN_KAMU dengan username akun Cloudflare baru
+const STREAM_PROXY = 'https://naga-stream-proxy.AKUN_BARU.workers.dev';
 
 let allData = {};
 let currentSport = 'football';
@@ -366,8 +367,7 @@ function shortName(name) {
 // ══ LOAD DATA ══
 async function loadData() {
   try {
-    // Primary: EmbedSportex via Cloudflare Worker (10 cabang olahraga)
-    const res = await fetch(PROXY+'?cache='+Date.now(), {signal: AbortSignal.timeout(10000)});
+    const res = await fetch(STREAM_PROXY+'/api', {signal: AbortSignal.timeout(10000)});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
 
@@ -388,8 +388,8 @@ async function loadData() {
     document.getElementById('matchWrap').innerHTML = `
       <div class="empty">
         <div class="empty-ico">⚠️</div>
-        <div style="font-size:.82rem;margin-bottom:12px;">Gagal memuat data pertandingan.</div>
-        <button onclick="loadData()" style="background:var(--accent);color:#000;border:none;padding:9px 18px;border-radius:7px;font-weight:700;font-size:.8rem;cursor:pointer;">↺ Coba Lagi</button>
+        <div style="font-size:.82rem;margin-bottom:12px;">Gagal memuat data.<br>
+        <button onclick="loadData()" style="margin-top:10px;background:var(--accent);color:#000;border:none;padding:9px 18px;border-radius:7px;font-weight:700;font-size:.8rem;cursor:pointer;">↺ Coba Lagi</button></div>
       </div>`;
   }
 }
@@ -535,9 +535,11 @@ function toggleCard(slug, e) {
 
 function openModal(url, title, e) {
   if(e) e.stopPropagation();
+  // Pakai /player endpoint dari Stream Proxy — built-in HLS.js player
+  const playerUrl = STREAM_PROXY + '/player?url=' + encodeURIComponent(btoa(url)) + '&title=' + encodeURIComponent(title);
   document.getElementById('modalTitle').textContent = title;
-  document.getElementById('modalFrame').src = url;
-  document.getElementById('extLink').href = url;
+  document.getElementById('modalFrame').src = playerUrl;
+  document.getElementById('extLink').href = playerUrl;
   document.getElementById('modal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
