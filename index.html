@@ -254,7 +254,7 @@ body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); 
 <!-- SIDEBAR (desktop only) -->
 <aside class="side">
   <div class="cta-box">
-    <h3> Bet Live di Naga1001</h3>
+    <h3>🐉 Bet Live di Naga1001</h3>
     <p>Pasang taruhan semua pertandingan — odds terbaik, proses cepat, CS 24 jam.</p>
     <a href="https://okenaga.com/nagalogin" target="_blank" rel="noopener">🟠 Login & Bet Sekarang</a>
   </div>
@@ -308,7 +308,7 @@ body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); 
   <a class="bnav-item" href="https://okenaga.com/nagalogin" target="_blank">
     <span class="bnav-ico">🎰</span>Bet
   </a>
-  <a class="bnav-item" href="https://okenaga.com/nagalogin">
+  <a class="bnav-item" href="https://okenaga.com/nagalogin" target="_blank">
     <span class="bnav-ico">🐉</span>Naga1001
   </a>
 </nav>
@@ -320,7 +320,7 @@ body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); 
 const BET = 'https://okenaga.com/nagalogin';
 // Stream proxy Worker (akun Cloudflare TERPISAH)
 // Ganti AKUN_KAMU dengan username akun Cloudflare baru
-const STREAM_PROXY = 'https://naga-stream-proxy.alekreuaya.workers.dev';
+const STREAM_PROXY = 'https://naga-stream-proxy.AKUN_BARU.workers.dev';
 
 let allData = {};
 let currentSport = 'football';
@@ -470,22 +470,34 @@ function renderCard(m) {
        <div style="font-size:.6rem;color:var(--blue);margin-top:2px">${countdown(ko)}</div>`
     : `<div class="score ended">${m.score||'FT'}</div><div class="mtime ended">Selesai</div>`;
 
-  const streamPanel = hasStream ? `
+  // Untuk FlyEmbed, kita pakai match slug sebagai ID
+  const flyId = slug;
+  const streamPanel = `
     <div class="sp" id="sp-${slug}">
-      <div class="sp-title">📺 Pilih Server</div>
+      <div class="sp-title">📺 Tonton Live Stream</div>
       <div class="srv-grid">
-        ${streams.map((f,i) => {
+        <button class="srv-btn" onclick="openModal('${flyId}','${tag}',event)">
+          <span class="srv-ico">▶</span>
+          <span class="srv-lbl">Server 1 (HD)</span>
+          <span class="srv-arrow">→</span>
+        </button>
+        <button class="srv-btn" onclick="openModal('${flyId}-2','${tag}',event)">
+          <span class="srv-ico">▶</span>
+          <span class="srv-lbl">Server 2</span>
+          <span class="srv-arrow">→</span>
+        </button>
+        ${hasStream ? streams.slice(0,2).map((f,i) => {
           const url = f.url||f.iframe||f.embed||f.src||f;
-          const lbl = f.label||f.server||f.name||f.quality||('Server '+(i+1));
-          return `<button class="srv-btn" onclick="openModal('${url}','${tag}',event)">
-            <span class="srv-ico">▶</span>
+          const lbl = f.label||f.server||f.name||('Stream '+(i+1));
+          return `<button class="srv-btn" onclick="openEmbedDirect('${url}','${tag}',event)">
+            <span class="srv-ico">📡</span>
             <span class="srv-lbl">${lbl}</span>
             <span class="srv-arrow">→</span>
           </button>`;
-        }).join('')}
+        }).join('') : ''}
       </div>
-      <div class="sp-hint">Klik server untuk tonton dalam popup</div>
-    </div>` : '';
+      <div class="sp-hint">Klik server untuk tonton live dalam popup</div>
+    </div>`;
 
   const footer = `
     <div class="mf">
@@ -535,11 +547,15 @@ function toggleCard(slug, e) {
 
 function openModal(url, title, e) {
   if(e) e.stopPropagation();
-  // Pakai /player endpoint dari Stream Proxy — built-in HLS.js player
-  const playerUrl = STREAM_PROXY + '/player?url=' + encodeURIComponent(btoa(url)) + '&title=' + encodeURIComponent(title);
+
+  // Cek apakah url adalah FlyEmbed match ID atau URL biasa
+  // FlyEmbed format dari EmbedSportex: server label seperti "AUTO/iOS", "HD", dll
+  // Kita extract match ID dari slug pertandingan
+  const playerUrl = STREAM_PROXY + '/embed?id=' + encodeURIComponent(url) + '&title=' + encodeURIComponent(title);
+
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('modalFrame').src = playerUrl;
-  document.getElementById('extLink').href = playerUrl;
+  document.getElementById('extLink').href = 'https://flyembed.biz/embed/' + url;
   document.getElementById('modal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -548,6 +564,16 @@ function closeModal() {
   document.getElementById('modal').classList.remove('open');
   document.getElementById('modalFrame').src = '';
   document.body.style.overflow = '';
+}
+
+// Buka stream langsung dari EmbedSportex (fallback)
+function openEmbedDirect(url, title, e) {
+  if(e) e.stopPropagation();
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalFrame').src = url;
+  document.getElementById('extLink').href = url;
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
