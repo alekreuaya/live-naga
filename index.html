@@ -261,8 +261,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
 <nav class="bnav">
   <button class="bnav-item on" onclick="setLeague('all',null);setActiveNav(this)"><span class="bnav-ico">🌍</span>Semua</button>
-  <button class="bnav-item" onclick="setLeague('FIFA World Cup',null);setActiveNav(this)"><span class="bnav-ico">⚽</span>Bola</button>
-  <button class="bnav-item" onclick="setLeague('Motor Sports',null);setActiveNav(this)"><span class="bnav-ico">🏁</span>Balap</button>
+  <button class="bnav-item" onclick="setLeague('⚽ Sepak Bola',null);setActiveNav(this)"><span class="bnav-ico">⚽</span>Bola</button>
+  <button class="bnav-item" onclick="setLeague('🏀 Basket',null);setActiveNav(this)"><span class="bnav-ico">🏀</span>Basket</button>
   <a class="bnav-item" href="https://okenaga.com/nagalogin" target="_blank"><span class="bnav-ico">🎰</span>Bet</a>
   <a class="bnav-item" href="https://okenaga.com/nagalogin" target="_blank"><span class="bnav-ico">🐉</span>Naga1001</a>
 </nav>
@@ -279,20 +279,36 @@ let currentStatus = 'all';
 let openSlug = null;
 
 // ══ LOAD DATA ══
+const SPORT_CATS = ['football','basketball','american_football','baseball','badminton','volleyball','tennis','race','fight','hockey','rugby','cricket','other'];
+const SPORT_ICONS = {football:'⚽',basketball:'🏀',american_football:'🏈',baseball:'⚾',badminton:'🏸',volleyball:'🏐',tennis:'🎾',race:'🏁',fight:'🥊',hockey:'🏒',rugby:'🏉',cricket:'🏏',other:'📺'};
+const SPORT_LABELS = {football:'Sepak Bola',basketball:'Basket',american_football:'NFL',baseball:'Baseball',badminton:'Badminton',volleyball:'Voli',tennis:'Tenis',race:'Balap',fight:'Tinju/MMA',hockey:'Hockey',rugby:'Rugby',cricket:'Cricket',other:'Lainnya'};
+
 async function loadData() {
   try {
     const res = await fetch(PROXY + '/api', {signal: AbortSignal.timeout(12000)});
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if (!data.matches) throw new Error('No matches');
+    const raw = await res.json();
 
-    allMatches = data.matches;
+    // Transform: group jadi { "SportLabel (icon)": [...matches] }
+    allMatches = {};
+    let total = 0;
+    SPORT_CATS.forEach(cat => {
+      const arr = raw[cat] || [];
+      if (arr.length) {
+        const label = SPORT_ICONS[cat] + ' ' + SPORT_LABELS[cat];
+        allMatches[label] = arr.map(m => normalizeMatch(m, cat));
+        total += arr.length;
+      }
+    });
+
+    if (!total) throw new Error('Tidak ada data pertandingan');
+
     buildLeagueTabs();
     renderMatches();
     renderTicker();
     updateTime();
     resetProg();
-    showToast('✅ ' + data.total + ' pertandingan dimuat');
+    showToast('✅ ' + total + ' pertandingan dimuat');
   } catch(e) {
     document.getElementById('matchWrap').innerHTML = `
       <div class="empty">
@@ -301,6 +317,54 @@ async function loadData() {
         <button onclick="loadData()" style="background:var(--accent);color:#000;border:none;padding:9px 18px;border-radius:7px;font-weight:700;cursor:pointer;">↺ Coba Lagi</button>
       </div>`;
   }
+}
+
+function normalizeMatch(m, cat) {
+  const tag = m.tag || m.title || m.name || 'Match';
+  const parts = tag.split(/\s+vs\.?\s+/i);
+  const status = getMatchStatus(m.kickoff, m.endTime);
+  const firstStream = (m.iframes && m.iframes[0]) ? (m.iframes[0].url || m.iframes[0]) : '';
+  return {
+    id: m.slug || m.id || tag,
+    tag: tag,
+    team1: parts[0] || tag,
+    team2: parts[1] || 'TBD',
+    team1Logo: '',
+    team2Logo: '',
+    league: m.league || SPORT_LABELS[cat] || cat,
+    leagueLogo: '',
+    date: m.kickoff ? fmtDate(m.kickoff) : '',
+    time: m.kickoff ? fmtTimeOnly(m.kickoff) : '',
+    iframeURL: firstStream,
+    streams: m.iframes || [],
+    status: status,
+  };
+}
+
+function getMatchStatus(kickoff, endTime) {
+  if (!kickoff) return 'upcoming';
+  try {
+    const now = Date.now();
+    const s = new Date(kickoff.replace(' ','T') + (kickoff.includes('+') ? '' : '+07:00')).getTime();
+    const e = endTime ? new Date(endTime.replace(' ','T') + (endTime.includes('+') ? '' : '+07:00')).getTime() : s + 7200000;
+    if (now < s) return 'upcoming';
+    if (now <= e) return 'live';
+    return 'ended';
+  } catch(err) { return 'upcoming'; }
+}
+
+function fmtDate(str) {
+  try {
+    const d = new Date(str.replace(' ','T') + '+07:00');
+    return d.getDate() + '/' + (d.getMonth()+1);
+  } catch(e) { return ''; }
+}
+
+function fmtTimeOnly(str) {
+  try {
+    const d = new Date(str.replace(' ','T') + '+07:00');
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ' WIB';
+  } catch(e) { return ''; }
 }
 
 // ══ BUILD TABS DARI LEAGUE ══
@@ -312,7 +376,7 @@ function buildLeagueTabs() {
   let html = `<button class="ltab on" onclick="setLeague('all',this)">🌍 Semua <span class="cnt">${total}</span></button>`;
 
   const leagueIcons = {
-    'FIFA World Cup': '⚽', 'Premier League': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'La Liga': '🇪🇸',
+    'FIFA World Cup': '⚽', 'Premier League': '🏴', 'La Liga': '🇪🇸',
     'MLB': '⚾', 'NBA': '🏀', 'Tennnis': '🎾', 'Tennis': '🎾',
     'Motor Sports': '🏁', 'NFL': '🏈', 'UFC': '🥊', 'MMA': '🥊',
     'Rugby': '🏉', 'Golf': '⛳', 'Cricket': '🏏',
@@ -370,11 +434,10 @@ function renderMatches() {
 }
 
 function renderCard(m, league) {
-  const slug = 'm' + m.id + league.replace(/\s+/g,'');
+  const slug = ('m' + m.id + league).replace(/[^a-zA-Z0-9]/g,'');
   const isOpen = openSlug === slug;
   const o = m.status !== 'ended' ? genOdds() : null;
-  const iframeUrl = m.iframeURL || '';
-  const playerUrl = PROXY + '/embed?src=' + encodeURIComponent(iframeUrl) + '&title=' + encodeURIComponent(m.tag);
+  const hasStream = m.streams && m.streams.length > 0;
 
   const center = m.status === 'live'
     ? `<div class="mbadge">LIVE</div><div class="vs" style="color:var(--red)">VS</div>`
@@ -382,15 +445,20 @@ function renderCard(m, league) {
     ? `<div class="vs">VS</div><div class="mtime upcoming">${m.time}</div><div class="mdate">${m.date}</div>`
     : `<div class="vs">VS</div><div class="mtime ended">Selesai</div><div class="mdate">${m.date}</div>`;
 
-  const streamPanel = iframeUrl ? `
+  const streamPanel = hasStream ? `
     <div class="sp" id="sp-${slug}">
-      <div class="sp-title">📺 Tonton Live Stream</div>
+      <div class="sp-title">📺 Pilih Server</div>
       <div class="srv-grid">
-        <button class="srv-btn" onclick="openPlayer('${playerUrl}','${m.tag.replace(/'/g,"\\'")}','${playerUrl}',event)">
-          <span class="srv-ico">▶</span>
-          <span class="srv-lbl">Tonton Sekarang</span>
-          <span class="srv-arrow">→</span>
-        </button>
+        ${m.streams.slice(0,4).map((s,i) => {
+          const url = s.url || s.iframe || s;
+          const lbl = s.server || s.label || ('Server ' + (i+1));
+          const playerUrl = PROXY + '/embed?src=' + encodeURIComponent(url) + '&title=' + encodeURIComponent(m.tag);
+          return `<button class="srv-btn" onclick="openPlayer('${playerUrl}','${m.tag.replace(/'/g,"\\'")}','${url}',event)">
+            <span class="srv-ico">▶</span>
+            <span class="srv-lbl">${lbl}</span>
+            <span class="srv-arrow">→</span>
+          </button>`;
+        }).join('')}
       </div>
     </div>` : '';
 
@@ -407,15 +475,9 @@ function renderCard(m, league) {
   return `
   <div class="match ${m.status}${isOpen?' open':''}" id="mc-${slug}" onclick="toggleCard('${slug}',event)">
     <div class="mb">
-      <div class="team">
-        ${m.team1Logo ? `<img class="t-logo" src="${m.team1Logo}" alt="" onerror="this.style.display='none'">` : ''}
-        <div class="t-name">${m.team1}</div>
-      </div>
+      <div class="team"><div class="t-name">${m.team1}</div></div>
       <div class="mc">${center}</div>
-      <div class="team away">
-        ${m.team2Logo ? `<img class="t-logo" src="${m.team2Logo}" alt="" onerror="this.style.display='none'">` : ''}
-        <div class="t-name">${m.team2}</div>
-      </div>
+      <div class="team away"><div class="t-name">${m.team2}</div></div>
     </div>
     ${streamPanel}
     ${footer}
